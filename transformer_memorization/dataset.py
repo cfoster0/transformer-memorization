@@ -73,7 +73,7 @@ class ArithmeticSequenceDataset(Dataset):
             bytes = " ".join([str(x) for x in range(idx, self.limit, self.difference)]).encode()[:self.seqlen]
             num_padding = self.seqlen - len(bytes)
             bytes += b' ' * num_padding
-            item = torch.LongTensor([b for b in bytes])
+            item = torch.LongTensor([b for b in bytes]).cuda()
             return item
 
         else:
@@ -100,7 +100,7 @@ class HashedIndexDataset(Dataset):
             bytes = str(hash(idx)).encode()[:self.seqlen]
             num_padding = self.seqlen - len(bytes)
             bytes += b' ' * num_padding
-            item = torch.LongTensor([b for b in bytes])
+            item = torch.LongTensor([b for b in bytes]).cuda()
             return item
         else:
             raise ValueError("Hashed index dataset indexed too far")
@@ -115,11 +115,12 @@ class RandomBytesDataset(Dataset):
         Args:
             seqlen (int): Sequence length to use for generation
             length (int): Number of sequences in dataset
-            inline_metad (bool): Whether to include the datapoint index as inline metadata
+            inline_meta (bool): Whether to include the datapoint index as inline metadata
         """
         self.seqlen = seqlen
         self.length = length
         self.inline_meta = inline_meta
+        self.meta_digit_length = len(str(length))
         self.cache = {}
 
     def __len__(self):
@@ -131,11 +132,11 @@ class RandomBytesDataset(Dataset):
                 return self.cache[idx]
             else:
                 if self.inline_meta:
-                    meta = str(idx).encode()
+                    meta = str(idx).zfill(self.meta_digit_length).encode()
                     bytes = meta + token_bytes(self.seqlen - len(meta))
                 else:
                     bytes = token_bytes(self.seqlen)
-                item = torch.LongTensor([b for b in bytes])
+                item = torch.LongTensor([b for b in bytes]).cuda()
                 self.cache[idx] = item
                 return item
         else:
