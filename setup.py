@@ -19,7 +19,7 @@ setup(
     'einops>=0.3',
     'hydra-core',
     'wandb',
-    'simple-parallel-transformer @ git+ssh://git@github.com/cfoster0/simple-parallel-transformer.git'
+    'simple-parallel-transformer @ git+ssh://git@github.com/cfoster0/simple-parallel-transformer.git@main'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
