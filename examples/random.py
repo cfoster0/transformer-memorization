@@ -25,6 +25,12 @@ from hydra.core.config_store import ConfigStore
 class RandomBytesConfig:
     """Class for keeping track of config variables."""
     dataset_size: int
+    depth: int
+    heads: int
+    head_dim: int
+    vocab_size: int
+    max_seq_len: int = 2048
+    expansion_factor: int = 4
     max_seq_len: int = 1024
     shuffle: bool = True
     num_batches: int = int(1e5)
@@ -66,8 +72,8 @@ def train(cfg: RandomBytesConfig) -> None:
     model = AutoregressiveWrapper(model)
     model.cuda()
 
-    train_dataset = RandomBytesDataset(seqlen=cfg.max_seq_len, length=cfg.dataset_size)
-    val_dataset   = RandomBytesDataset(seqlen=cfg.max_seq_len, length=cfg.dataset_size)
+    train_dataset = RandomBytesDataset(seqlen=cfg.max_seq_len + 1, length=cfg.dataset_size)
+    val_dataset   = RandomBytesDataset(seqlen=cfg.max_seq_len + 1, length=cfg.dataset_size)
     train_loader  = cycle(DataLoader(train_dataset, batch_size = cfg.batch_size, shuffle=cfg.shuffle))
     val_loader    = cycle(DataLoader(val_dataset, batch_size = cfg.batch_size, shuffle=cfg.shuffle))
 
