@@ -110,14 +110,16 @@ class HashedIndexDataset(Dataset):
 class RandomBytesDataset(Dataset):
     """Random bytes sythetic dataset."""
 
-    def __init__(self, seqlen=128, length=1_000_000):
+    def __init__(self, seqlen=128, length=1_000_000, inline_meta=False):
         """
         Args:
             seqlen (int): Sequence length to use for generation
             length (int): Number of sequences in dataset
+            inline_metad (bool): Whether to include the datapoint index as inline metadata
         """
         self.seqlen = seqlen
         self.length = length
+        self.inline_meta = inline_meta
         self.cache = {}
 
     def __len__(self):
@@ -128,7 +130,11 @@ class RandomBytesDataset(Dataset):
             if idx in self.cache:
                 return self.cache[idx]
             else:
-                bytes = token_bytes(self.seqlen)
+                if self.inline_meta:
+                    meta = str(idx).encode()
+                    bytes = meta + token_bytes(self.seqlen - len(meta))
+                else:
+                    bytes = token_bytes(self.seqlen)
                 item = torch.LongTensor([b for b in bytes])
                 self.cache[idx] = item
                 return item
