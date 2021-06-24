@@ -1,4 +1,4 @@
-from transformer_memorization import RandomBytesDataset
+from transformer_memorization import RandomBytesDataset, ZipfianSampler
 
 # This code was adapted from lucidrains existing `x-transformers` repository.
 from simple_parallel_transformer import Transformer, Config
@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from hydra.core.config_store import ConfigStore
 
 @dataclass
-class RandomBytesConfig:
+class ZipfianBytesConfig:
     """Class for keeping track of config variables."""
     dataset_size: int
     inline_meta: bool
@@ -30,11 +30,11 @@ class RandomBytesConfig:
     heads: int
     head_dim: int
     vocab_size: int
+    scale: float
     weight_decay: bool = False
     max_seq_len: int = 2048
     expansion_factor: int = 4
     max_seq_len: int = 1024
-    shuffle: bool = True
     num_batches: int = int(1e5)
     batch_size: int = 4
     gradient_accumulate_every: int = 4
@@ -44,7 +44,7 @@ class RandomBytesConfig:
     generate_legnth: int = 512
         
 cs = ConfigStore.instance()
-cs.store(name="random-bytes-config", node=RandomBytesConfig)
+cs.store(name="zipfian-bytes-config", node=ZipfianBytesConfig)
 
 # helpers
 
@@ -61,9 +61,9 @@ def decode_tokens(tokens):
 
 
 
-@hydra.main(config_path=None, config_name="random-bytes-config")
-def train(cfg: RandomBytesConfig) -> None:
-    wandb.init(project="transformer-memorization-hashed", config=cfg)
+@hydra.main(config_path=None, config_name="zipfian-bytes-config")
+def train(cfg: ZipfianBytesConfig) -> None:
+    wandb.init(project="transformer-memorization-zipfian", config=cfg)
 
     # instantiate GPT-like decoder model
 
@@ -76,8 +76,12 @@ def train(cfg: RandomBytesConfig) -> None:
 
     train_dataset = RandomBytesDataset(seqlen=cfg.max_seq_len + 1, length=cfg.dataset_size, inline_meta=cfg.inline_meta)
     val_dataset   = RandomBytesDataset(seqlen=cfg.max_seq_len + 1, length=cfg.dataset_size, inline_meta=cfg.inline_meta)
-    train_loader  = cycle(DataLoader(train_dataset, batch_size = cfg.batch_size, shuffle=cfg.shuffle))
-    val_loader    = cycle(DataLoader(val_dataset, batch_size = cfg.batch_size, shuffle=cfg.shuffle))
+
+    train_sampler = ZipfianSampler(alpha=cfg.scale, num_ranks=len(train_dataset), samples_per_epoch=cfg.dataset_size)
+    val_sampler = ZipfianSampler(alpha=cfg.scale, num_ranks=len(val_dataset), samples_per_epoch=cfg.dataset_size)
+
+    train_loader  = cycle(DataLoader(train_dataset, batch_size = cfg.batch_size, sampler=train_sampler))
+    val_loader    = cycle(DataLoader(val_dataset, batch_size = cfg.batch_size, sampler=val_sampler))
 
     # optimizer
 

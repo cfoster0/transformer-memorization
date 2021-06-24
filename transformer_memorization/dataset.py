@@ -1,8 +1,10 @@
 import functools
 import torch
 from collections import Counter, defaultdict
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from typing import Iterator, Optional, Sequence, List, TypeVar, Generic, Sized
 from secrets import token_bytes
+from random import random
 
 def cycle(loader):
     while True:
@@ -141,3 +143,23 @@ class RandomBytesDataset(Dataset):
                 return item
         else:
             raise ValueError("Random bytes dataset indexed too far")
+
+
+
+
+class ZipfianSampler(WeightedRandomSampler):
+    samples_per_epoch: int
+    replacement: bool
+
+    def __init__(self, alpha: float, num_ranks: int, samples_per_epoch: int,
+                 replacement: bool = True, generator=None) -> None:
+        x_min = 5
+        zipf = lambda x: ((alpha - 1) / x_min) * (x / x_min) ** -alpha
+        weights = [zipf(n + x_min) for n in range(num_ranks)]
+        super(ZipfianSampler, self).__init__(weights=weights, num_samples=samples_per_epoch, replacement=replacement, generator=generator)
+
+    def __iter__(self) -> Iterator[int]:
+        return super(ZipfianSampler, self).__iter__()
+
+    def __len__(self) -> int:
+        return super(ZipfianSampler, self).__len__()
